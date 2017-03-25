@@ -1,0 +1,7 @@
+vendor/
+
+# glide
+glide.lock
+
+# dep
+lock.json
