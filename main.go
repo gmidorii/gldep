@@ -41,31 +41,31 @@ const glideFile = "glide.yaml"
 const manifestFile = "manifest.json"
 
 func main() {
-	file, err := os.Open(glideFile)
+	inFile, err := os.Open(glideFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
-	data, err := fileRead(file)
+	defer inFile.Close()
+	glideData, err := readFile(inFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// yaml to struct
 	var g glide
-	err = yaml.Unmarshal(data, &g)
+	err = yaml.Unmarshal(glideData, &g)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// convert
 	manifestMap := make(map[string]manifestValue)
-	var m manifestValue
+	var value manifestValue
 	for _, v := range g.Imports {
-		m.Revision = v.Version
-		manifestMap[v.Package] = m
+		value.Revision = v.Version
+		manifestMap[v.Package] = value
 	}
-	mani := manifest{Dependencies: manifestMap}
-
-	json, err := json.Marshal(mani)
+	manifestData, err := json.Marshal(manifest{Dependencies: manifestMap})
 
 	mFile, err := os.Create(manifestFile)
 	if err != nil {
@@ -73,13 +73,13 @@ func main() {
 	}
 	defer mFile.Close()
 
-	err = fileWrite(mFile, json)
+	err = writeFile(mFile, manifestData)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func fileRead(file *os.File) ([]byte, error) {
+func readFile(file *os.File) ([]byte, error) {
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func fileRead(file *os.File) ([]byte, error) {
 	return data, err
 }
 
-func fileWrite(file *os.File, json []byte) error {
+func writeFile(file *os.File, json []byte) error {
 	writer := bufio.NewWriter(file)
 	if _, err := writer.Write(json); err != nil {
 		return err
