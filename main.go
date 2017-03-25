@@ -1,11 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
 	"io/ioutil"
+
+	"encoding/json"
+
+	"bufio"
 
 	"gopkg.in/yaml.v2"
 )
@@ -19,7 +22,7 @@ func (g glide) String() string {
 	return g.Name
 }
 
-type dependencies []dependency
+type dependencies []*dependency
 
 type dependency struct {
 	Package string `yaml:"package,omitempty"`
@@ -31,18 +34,18 @@ type manifest struct {
 }
 
 type manifestValue struct {
-	Branch  string `json:"branch,omitempty"`
-	Version string `json:"version,omitempty"`
+	Revision string `json:"revision,omitempty"`
 }
 
 const glideFile = "glide.yaml"
-const manifestFile = "mainfest.json"
+const manifestFile = "manifest.json"
 
 func main() {
 	file, err := os.Open(glideFile)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer file.Close()
 	data, err := fileRead(file)
 	if err != nil {
 		log.Fatal(err)
@@ -53,7 +56,27 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(g)
+
+	manifestMap := make(map[string]manifestValue)
+	var m manifestValue
+	for _, v := range g.Imports {
+		m.Revision = v.Version
+		manifestMap[v.Package] = m
+	}
+	mani := manifest{Dependencies: manifestMap}
+
+	json, err := json.Marshal(mani)
+
+	mFile, err := os.Create(manifestFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer mFile.Close()
+
+	err = fileWrite(mFile, json)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func fileRead(file *os.File) ([]byte, error) {
@@ -62,4 +85,12 @@ func fileRead(file *os.File) ([]byte, error) {
 		return nil, err
 	}
 	return data, err
+}
+
+func fileWrite(file *os.File, json []byte) error {
+	writer := bufio.NewWriter(file)
+	if _, err := writer.Write(json); err != nil {
+		return err
+	}
+	return writer.Flush()
 }
