@@ -65,7 +65,7 @@ func main() {
 		value.Revision = v.Version
 		manifestMap[v.Package] = value
 	}
-	manifestData, err := json.Marshal(manifest{Dependencies: manifestMap})
+	manifestData, err := json.MarshalIndent(manifest{Dependencies: manifestMap}, "", "\t")
 
 	outFile, err := os.Create(manifestFile)
 	if err != nil {
